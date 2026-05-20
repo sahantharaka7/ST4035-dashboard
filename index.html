@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ST4035 – Binary Logistic Regression Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, sans-serif; background: #f5f5f5; color: #1a1a1a; font-size: 15px; }
+  h1 { font-size: 20px; font-weight: 600; }
+  h2 { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #555; margin-bottom: 10px; }
+
+  header { background: #1e293b; color: white; padding: 16px 24px; display: flex; align-items: center; gap: 12px; }
+  header span { font-size: 13px; background: #334155; padding: 3px 10px; border-radius: 20px; }
+
+  .container { max-width: 1280px; margin: 0 auto; padding: 20px; }
+
+  .controls-panel { background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 1px solid #e2e8f0; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 768px) { .controls-panel { grid-template-columns: 1fr; } }
+
+  .control-group { display: flex; flex-direction: column; gap: 8px; }
+  .control-label { font-size: 13px; color: #555; font-weight: 500; }
+  .slider-row { display: flex; align-items: center; gap: 10px; }
+  .slider-row input[type=range] { flex: 1; accent-color: #3b82f6; }
+  .slider-val { font-size: 14px; font-weight: 600; color: #1e40af; min-width: 60px; }
+
+  .toggle-group { display: flex; flex-wrap: wrap; gap: 6px; }
+  .toggle-btn { padding: 6px 14px; border-radius: 20px; border: 1.5px solid #cbd5e1; background: white; cursor: pointer; font-size: 13px; color: #475569; transition: all 0.15s; }
+  .toggle-btn:hover { border-color: #3b82f6; color: #1d4ed8; }
+  .toggle-btn.active { background: #3b82f6; color: white; border-color: #3b82f6; font-weight: 600; }
+
+  .metrics-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+  @media (max-width: 768px) { .metrics-row { grid-template-columns: repeat(2, 1fr); } }
+  .metric-card { background: white; border-radius: 10px; padding: 14px 18px; border: 1px solid #e2e8f0; }
+  .metric-label { font-size: 12px; color: #64748b; margin-bottom: 4px; }
+  .metric-value { font-size: 26px; font-weight: 700; color: #1e293b; }
+  .metric-card.blue .metric-value { color: #2563eb; }
+  .metric-card.green .metric-value { color: #16a34a; }
+  .metric-card.orange .metric-value { color: #d97706; }
+  .metric-card.purple .metric-value { color: #7c3aed; }
+
+  .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+  @media (max-width: 900px) { .charts-grid { grid-template-columns: 1fr; } }
+  .chart-card { background: white; border-radius: 12px; padding: 18px; border: 1px solid #e2e8f0; }
+  .chart-card h3 { font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #f1f5f9; }
+
+  .footer-panel { background: #1e293b; color: #e2e8f0; border-radius: 12px; padding: 16px 24px; display: flex; flex-wrap: wrap; gap: 20px; align-items: center; }
+  .footer-item { display: flex; flex-direction: column; gap: 2px; }
+  .footer-item .fl { font-size: 11px; color: #94a3b8; }
+  .footer-item .fv { font-size: 15px; font-weight: 700; color: #f0f9ff; }
+  .footer-item .fv.good { color: #4ade80; }
+  .footer-item .fv.link { color: #93c5fd; }
+
+  .cm-grid { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 6px; height: 200px; }
+  .cm-cell { border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; }
+  .cm-cell .cm-val { font-size: 22px; font-weight: 700; }
+  .cm-cell .cm-lbl { font-size: 11px; }
+  .cm-cell.tp { background: #dcfce7; }
+  .cm-cell.tp .cm-val { color: #15803d; }
+  .cm-cell.tp .cm-lbl { color: #166534; }
+  .cm-cell.fn { background: #fef9c3; }
+  .cm-cell.fn .cm-val { color: #92400e; }
+  .cm-cell.fn .cm-lbl { color: #92400e; }
+  .cm-cell.fp { background: #fef9c3; }
+  .cm-cell.fp .cm-val { color: #92400e; }
+  .cm-cell.fp .cm-lbl { color: #92400e; }
+  .cm-cell.tn { background: #dcfce7; }
+  .cm-cell.tn .cm-val { color: #15803d; }
+  .cm-cell.tn .cm-lbl { color: #166534; }
+
+  .cm-axis { display: grid; grid-template-columns: 1fr 1fr; text-align: center; font-size: 11px; color: #64748b; margin-bottom: 4px; }
+  .cm-row-axis { display: flex; flex-direction: column; justify-content: space-around; font-size: 11px; color: #64748b; position: absolute; left: -56px; height: 100%; }
+  .cm-wrapper { position: relative; padding-left: 60px; }
+
+  canvas { display: block; width: 100% !important; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Binary Logistic Regression Dashboard</h1>
+    <div style="font-size:13px; color:#94a3b8; margin-top:2px;">ST4035 – Data Science &nbsp;|&nbsp; Interactive Explorer</div>
+  </div>
+  <div style="margin-left:auto;"><span>Live Demo</span></div>
+</header>
+
+<div class="container">
+
+  <!-- Controls -->
+  <div class="controls-panel">
+    <div class="control-group">
+      <div class="control-label">Sample size (n)</div>
+      <div class="slider-row">
+        <input type="range" id="sampleSlider" min="100" max="2000" step="50" value="500">
+        <span class="slider-val" id="sampleVal">n = 500</span>
+      </div>
+    </div>
+    <div class="control-group">
+      <div class="control-label">Minority class proportion</div>
+      <div class="slider-row">
+        <input type="range" id="imbalanceSlider" min="5" max="50" step="5" value="20">
+        <span class="slider-val" id="imbalanceVal">20%</span>
+      </div>
+    </div>
+    <div class="control-group">
+      <div class="control-label">Balancing method</div>
+      <div class="toggle-group" id="balanceGroup">
+        <button class="toggle-btn active" data-val="none">None (imbalanced)</button>
+        <button class="toggle-btn" data-val="over">Oversampling</button>
+        <button class="toggle-btn" data-val="under">Undersampling</button>
+        <button class="toggle-btn" data-val="smote">SMOTE</button>
+      </div>
+    </div>
+    <div class="control-group">
+      <div class="control-label">Link function</div>
+      <div class="toggle-group" id="linkGroup">
+        <button class="toggle-btn active" data-val="logit">Logit</button>
+        <button class="toggle-btn" data-val="probit">Probit</button>
+        <button class="toggle-btn" data-val="cloglog">Complementary log-log</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Metrics -->
+  <div class="metrics-row">
+    <div class="metric-card blue"><div class="metric-label">Total samples</div><div class="metric-value" id="mTotal">500</div></div>
+    <div class="metric-card green"><div class="metric-label">Class 1 count (minority)</div><div class="metric-value" id="mClass1">100</div></div>
+    <div class="metric-card orange"><div class="metric-label">Class 0 count (majority)</div><div class="metric-value" id="mClass0">400</div></div>
+    <div class="metric-card purple"><div class="metric-label">Imbalance ratio</div><div class="metric-value" id="mRatio">1 : 4.0</div></div>
+  </div>
+
+  <!-- Charts -->
+  <div class="charts-grid">
+    <div class="chart-card">
+      <h3>Chart 1 — Class distribution (before &amp; after balancing)</h3>
+      <div style="position:relative;height:260px;"><canvas id="distChart" role="img" aria-label="Grouped bar chart showing class distribution before and after balancing">Class distribution chart</canvas></div>
+    </div>
+    <div class="chart-card">
+      <h3>Chart 2 — Fitted probability curves (link functions)</h3>
+      <div style="position:relative;height:260px;"><canvas id="linkChart" role="img" aria-label="Line chart showing fitted probability curves for logit, probit, and complementary log-log link functions">Link function curves</canvas></div>
+    </div>
+    <div class="chart-card">
+      <h3>Chart 3 — ROC curve</h3>
+      <div style="position:relative;height:260px;"><canvas id="rocChart" role="img" aria-label="ROC curve showing sensitivity versus 1 minus specificity with AUC value">ROC curve</canvas></div>
+    </div>
+    <div class="chart-card">
+      <h3>Chart 4 — Confusion matrix (normalised)</h3>
+      <div style="margin-top:8px;">
+        <div style="text-align:center; font-size:11px; color:#64748b; margin-bottom:4px;">Predicted →</div>
+        <div class="cm-axis"><span>Predicted positive</span><span>Predicted negative</span></div>
+        <div class="cm-wrapper">
+          <div class="cm-row-axis"><span>Actual positive</span><span>Actual negative</span></div>
+          <div class="cm-grid">
+            <div class="cm-cell tp"><div class="cm-val" id="cmTP">0.00</div><div class="cm-lbl">True positive rate</div></div>
+            <div class="cm-cell fn"><div class="cm-val" id="cmFN">0.00</div><div class="cm-lbl">False negative rate</div></div>
+            <div class="cm-cell fp"><div class="cm-val" id="cmFP">0.00</div><div class="cm-lbl">False positive rate</div></div>
+            <div class="cm-cell tn"><div class="cm-val" id="cmTN">0.00</div><div class="cm-lbl">True negative rate</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer-panel">
+    <div class="footer-item"><span class="fl">AUC</span><span class="fv good" id="fAUC">—</span></div>
+    <div class="footer-item"><span class="fl">Accuracy</span><span class="fv good" id="fAcc">—</span></div>
+    <div class="footer-item"><span class="fl">Sensitivity (TPR)</span><span class="fv good" id="fSens">—</span></div>
+    <div class="footer-item"><span class="fl">Specificity (TNR)</span><span class="fv good" id="fSpec">—</span></div>
+    <div class="footer-item"><span class="fl">Link function</span><span class="fv link" id="fLink">Logit</span></div>
+    <div class="footer-item"><span class="fl">Balancing method</span><span class="fv link" id="fBalance">None (imbalanced)</span></div>
+    <div style="margin-left:auto; font-size:11px; color:#64748b;">All metrics update in real time</div>
+  </div>
+
+</div>
+
+<script>
+// ─── State ───────────────────────────────────────────────────────────────────
+let state = { n: 500, imb: 20, balance: 'none', link: 'logit' };
+
+// ─── Link functions ──────────────────────────────────────────────────────────
+const linkFns = {
+  logit:   eta => 1 / (1 + Math.exp(-eta)),
+  probit:  eta => 0.5 * (1 + erf(eta / Math.SQRT2)),
+  cloglog: eta => 1 - Math.exp(-Math.exp(eta))
+};
+
+function erf(x) {
+  const t = 1 / (1 + 0.3275911 * Math.abs(x));
+  const poly = t * (0.254829592 + t * (-0.284496736 + t * (1.421413741 + t * (-1.453152027 + t * 1.061405429))));
+  const r = 1 - poly * Math.exp(-x * x);
+  return x >= 0 ? r : -r;
+}
+
+// ─── Simulation helpers ───────────────────────────────────────────────────────
+function getClassCounts() {
+  const n = state.n;
+  const minProp = state.imb / 100;
+  const orig1 = Math.round(n * minProp);
+  const orig0 = n - orig1;
+
+  let bal1 = orig1, bal0 = orig0;
+  if (state.balance === 'over') { bal1 = orig0; }
+  else if (state.balance === 'under') { bal0 = orig1; }
+  else if (state.balance === 'smote') { bal1 = Math.round(orig0 * 0.85); bal0 = orig0; }
+
+  return { orig0, orig1, bal0, bal1 };
+}
+
+function simulateMetrics() {
+  const { orig0, orig1, bal1, bal0 } = getClassCounts();
+  const totalBal = bal0 + bal1;
+  const balRatio = bal1 / totalBal;
+
+  // Simulated model quality depends on balance & link
+  const linkBonus = { logit: 0, probit: 0.01, cloglog: -0.015 };
+  const balBonus = { none: 0, over: 0.06, under: 0.03, smote: 0.08 };
+  const imbalancePenalty = Math.max(0, (0.5 - balRatio) * 0.3);
+
+  const baseAUC = 0.72 + (linkBonus[state.link] || 0) + (balBonus[state.balance] || 0) - imbalancePenalty;
+  const AUC = Math.min(0.97, Math.max(0.50, baseAUC + (Math.random() * 0.02 - 0.01)));
+
+  const sensitivity = Math.min(0.98, 0.60 + (balBonus[state.balance] || 0) * 1.2 + (linkBonus[state.link] || 0) - imbalancePenalty * 0.5);
+  const specificity  = Math.min(0.98, 0.80 + (linkBonus[state.link] || 0) - (balBonus[state.balance] || 0) * 0.3);
+  const accuracy = (sensitivity * balRatio + specificity * (1 - balRatio));
+
+  const TPR = sensitivity, FNR = 1 - TPR, FPR = 1 - specificity, TNR = specificity;
+
+  return { AUC, sensitivity, specificity, accuracy, TPR, FNR, FPR, TNR };
+}
+
+function generateROC(AUC) {
+  const pts = [{ x: 0, y: 0 }];
+  const steps = 50;
+  // Simple ROC generation from AUC using a beta-like curve
+  for (let i = 1; i <= steps; i++) {
+    const fpr = i / steps;
+    // Shape of curve based on AUC
+    const tpr = Math.min(1, Math.pow(fpr, (1 - AUC) / AUC));
+    pts.push({ x: parseFloat(fpr.toFixed(4)), y: parseFloat(tpr.toFixed(4)) });
+  }
+  pts.push({ x: 1, y: 1 });
+  return pts;
+}
+
+// ─── Charts ──────────────────────────────────────────────────────────────────
+let distChart, linkChart, rocChart;
+
+function initDistChart() {
+  const ctx = document.getElementById('distChart').getContext('2d');
+  distChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['Original dataset', 'After balancing'],
+      datasets: [
+        {
+          label: 'Class 1 (minority)',
+          data: [0, 0],
+          backgroundColor: 'rgba(59,130,246,0.75)',
+          borderColor: '#2563eb',
+          borderWidth: 1.5,
+          borderRadius: 4
+        },
+        {
+          label: 'Class 0 (majority)',
+          data: [0, 0],
+          backgroundColor: 'rgba(249,115,22,0.75)',
+          borderColor: '#c2410c',
+          borderWidth: 1.5,
+          borderRadius: 4,
+          borderDash: [4, 4]
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'top', labels: { boxWidth: 12, font: { size: 12 } } } },
+      scales: {
+        x: { grid: { display: false } },
+        y: { beginAtZero: true, ticks: { font: { size: 11 } } }
+      }
+    }
+  });
+}
+
+function initLinkChart() {
+  const ctx = document.getElementById('linkChart').getContext('2d');
+  const etas = [];
+  for (let e = -4; e <= 4; e += 0.16) etas.push(parseFloat(e.toFixed(2)));
+
+  linkChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: etas,
+      datasets: [
+        {
+          label: 'Logit',
+          data: etas.map(e => linkFns.logit(e)),
+          borderColor: '#2563eb', backgroundColor: 'transparent',
+          borderWidth: 2, pointRadius: 0,
+          borderDash: []
+        },
+        {
+          label: 'Probit',
+          data: etas.map(e => linkFns.probit(e)),
+          borderColor: '#d97706', backgroundColor: 'transparent',
+          borderWidth: 2, pointRadius: 0,
+          borderDash: [6, 3]
+        },
+        {
+          label: 'Complementary log-log',
+          data: etas.map(e => linkFns.cloglog(e)),
+          borderColor: '#7c3aed', backgroundColor: 'transparent',
+          borderWidth: 2, pointRadius: 0,
+          borderDash: [2, 3]
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'top', labels: { boxWidth: 12, font: { size: 12 } } } },
+      scales: {
+        x: {
+          ticks: {
+            autoSkip: true, maxTicksLimit: 9, font: { size: 10 },
+            callback: (v, i, ticks) => etas[i] !== undefined ? etas[i].toFixed(1) : ''
+          },
+          title: { display: true, text: 'Linear predictor (η)', font: { size: 11 } }
+        },
+        y: { min: 0, max: 1, title: { display: true, text: 'P(Y=1|η)', font: { size: 11 } }, ticks: { font: { size: 10 } } }
+      }
+    }
+  });
+}
+
+function initROCChart() {
+  const ctx = document.getElementById('rocChart').getContext('2d');
+  const diag = Array.from({ length: 11 }, (_, i) => ({ x: i / 10, y: i / 10 }));
+  rocChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      datasets: [
+        {
+          label: 'Model ROC',
+          data: [],
+          borderColor: '#2563eb', backgroundColor: 'rgba(59,130,246,0.08)',
+          borderWidth: 2.5, pointRadius: 0, fill: true
+        },
+        {
+          label: 'Random classifier',
+          data: diag,
+          borderColor: '#94a3b8', backgroundColor: 'transparent',
+          borderWidth: 1.5, pointRadius: 0, borderDash: [5, 5]
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'top', labels: { boxWidth: 12, font: { size: 12 } } } },
+      scales: {
+        x: {
+          type: 'linear', min: 0, max: 1,
+          title: { display: true, text: '1 – Specificity (FPR)', font: { size: 11 } },
+          ticks: { font: { size: 10 } }
+        },
+        y: {
+          min: 0, max: 1,
+          title: { display: true, text: 'Sensitivity (TPR)', font: { size: 11 } },
+          ticks: { font: { size: 10 } }
+        }
+      }
+    }
+  });
+}
+
+// ─── Update all charts & metrics ──────────────────────────────────────────────
+const linkNames = { logit: 'Logit', probit: 'Probit', cloglog: 'Complementary log-log' };
+const balanceNames = { none: 'None (imbalanced)', over: 'Oversampling', under: 'Undersampling', smote: 'SMOTE' };
+
+function update() {
+  const { orig0, orig1, bal0, bal1 } = getClassCounts();
+  const totalBal = bal0 + bal1;
+  const ratio = (orig0 / orig1).toFixed(1);
+  const metrics = simulateMetrics();
+
+  // Metric cards
+  document.getElementById('mTotal').textContent = totalBal;
+  document.getElementById('mClass1').textContent = bal1;
+  document.getElementById('mClass0').textContent = bal0;
+  document.getElementById('mRatio').textContent = '1 : ' + ratio;
+
+  // Chart 1 – distribution
+  distChart.data.datasets[0].data = [orig1, bal1];
+  distChart.data.datasets[1].data = [orig0, bal0];
+  distChart.update('none');
+
+  // Chart 2 – link functions (update boldness)
+  const widths = { logit: 2, probit: 2, cloglog: 2 };
+  widths[state.link] = 4.5;
+  linkChart.data.datasets[0].borderWidth = widths.logit;
+  linkChart.data.datasets[1].borderWidth = widths.probit;
+  linkChart.data.datasets[2].borderWidth = widths.cloglog;
+  linkChart.update('none');
+
+  // Chart 3 – ROC
+  rocChart.data.datasets[0].data = generateROC(metrics.AUC);
+  rocChart.options.plugins.title = {
+    display: true, text: 'AUC = ' + metrics.AUC.toFixed(3),
+    font: { size: 12 }, color: '#2563eb'
+  };
+  rocChart.update('none');
+
+  // Chart 4 – Confusion matrix
+  document.getElementById('cmTP').textContent = metrics.TPR.toFixed(2);
+  document.getElementById('cmFN').textContent = metrics.FNR.toFixed(2);
+  document.getElementById('cmFP').textContent = metrics.FPR.toFixed(2);
+  document.getElementById('cmTN').textContent = metrics.TNR.toFixed(2);
+
+  // Footer
+  document.getElementById('fAUC').textContent  = metrics.AUC.toFixed(3);
+  document.getElementById('fAcc').textContent  = (metrics.accuracy * 100).toFixed(1) + '%';
+  document.getElementById('fSens').textContent = (metrics.sensitivity * 100).toFixed(1) + '%';
+  document.getElementById('fSpec').textContent = (metrics.specificity * 100).toFixed(1) + '%';
+  document.getElementById('fLink').textContent    = linkNames[state.link];
+  document.getElementById('fBalance').textContent = balanceNames[state.balance];
+}
+
+// ─── Event listeners ──────────────────────────────────────────────────────────
+document.getElementById('sampleSlider').addEventListener('input', e => {
+  state.n = +e.target.value;
+  document.getElementById('sampleVal').textContent = 'n = ' + state.n;
+  update();
+});
+
+document.getElementById('imbalanceSlider').addEventListener('input', e => {
+  state.imb = +e.target.value;
+  document.getElementById('imbalanceVal').textContent = state.imb + '%';
+  update();
+});
+
+document.querySelectorAll('#balanceGroup .toggle-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#balanceGroup .toggle-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.balance = btn.dataset.val;
+    update();
+  });
+});
+
+document.querySelectorAll('#linkGroup .toggle-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#linkGroup .toggle-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.link = btn.dataset.val;
+    update();
+  });
+});
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+initDistChart();
+initLinkChart();
+initROCChart();
+update();
+</script>
+</body>
+</html>
